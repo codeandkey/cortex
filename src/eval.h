@@ -3,7 +3,7 @@
 #include "move.h"
 #include "board.h"
 
-#define CORTEX_EVAL_DEPTH 3
+#define CORTEX_EVAL_DEPTH 4
 
 /*
  * Generic importance for phase-specific evaluations.

@@ -19,3 +19,4 @@ int cortex_move_list_contains(cortex_move_list* dst, cortex_move sq);
 void cortex_move_list_print(cortex_move_list* dst);
 
 int cortex_move_list_get(cortex_move_list* dst, cortex_square from, cortex_square to, cortex_move* match);
+int cortex_move_list_equals(cortex_move_list* a, cortex_move_list* b);

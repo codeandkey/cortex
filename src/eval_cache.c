@@ -1,5 +1,6 @@
 #include "eval_cache.h"
 #include "xxhash.h"
+#include "log.h"
 
 #include <string.h>
 
@@ -7,17 +8,16 @@ static cortex_eval_cache_entry _cortex_eval_cache[CORTEX_EVAL_CACHE_SIZE];
 
 static cortex_eval_cache_entry* _cortex_eval_cache_get_dst(cortex_board* b);
 
-/*
- * The cache is currently flawed -- board positions with equal states and color to move are considered to be the same position
- * by the hashtable. However, it does not account for double pawn moves/etc altering future legal moves.
- * This will rarely affect the evaluation; but if it does, it could result in huge blunders or even illegal moves
- * suggested by the cached evaluation.
- */
-int cortex_eval_try_cache(cortex_board* b, cortex_eval* out) {
+int cortex_eval_try_cache(cortex_board* b, cortex_eval* out, int *out_depth) {
     cortex_eval_cache_entry* dst = _cortex_eval_cache_get_dst(b);
 
-    if (dst->filled && !memcmp(dst->state, b->state, sizeof b->state) && b->color_to_move == dst->to_move) {
+    if (!dst->game.len) return 0; /* don't cache empty games */
+
+    if (cortex_move_list_equals(&b->move_history, &dst->game)) {
         *out = dst->eval;
+        *out_depth = dst->depth;
+
+        cortex_log_debug("cache hit on game of length %d, eval %f", dst->game.len, dst->eval.evaluation);
         return 1;
     }
 
@@ -25,23 +25,21 @@ int cortex_eval_try_cache(cortex_board* b, cortex_eval* out) {
 }
 
 cortex_eval_cache_entry* _cortex_eval_cache_get_dst(cortex_board* b) {
-    /* First, get the bunch of data needed to hash the position. We include the piece states and color to move. */
-    u8 block[65];
+    //cortex_log_debug("grabbing dst for game:");
+    //cortex_move_list_print(&b->move_history);
 
-    memcpy(block, b->state, sizeof b->state);
-    block[64] = b->color_to_move;
+    /* The cache is based on the moves made in the game. */
+    int index = XXH32(b->move_history.list, b->move_history.len * sizeof b->move_history.list[0], 0) % CORTEX_EVAL_CACHE_SIZE;
 
-    /* Hash the state and search the hashtable. */
-    int index = XXH32(block, sizeof block, 0) % CORTEX_EVAL_CACHE_SIZE;
+    //cortex_log_debug("index is %d", index);
 
     return _cortex_eval_cache + index;
 }
 
-void cortex_eval_cache_insert(cortex_board* b, cortex_eval eval) {
+void cortex_eval_cache_insert(cortex_board* b, cortex_eval eval, int depth) {
     cortex_eval_cache_entry* dst = _cortex_eval_cache_get_dst(b);
 
-    dst->filled = 1;
-    memcpy(dst->state, b->state, sizeof b->state);
-    dst->to_move = b->color_to_move;
+    memcpy(&dst->game, &b->move_history, sizeof dst->game);
     dst->eval = eval;
+    dst->depth = depth;
 }

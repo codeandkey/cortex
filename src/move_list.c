@@ -46,3 +46,14 @@ int cortex_move_list_get(cortex_move_list* dst, cortex_square from, cortex_squar
 
     return -1;
 }
+
+int cortex_move_list_equals(cortex_move_list* a, cortex_move_list* b) {
+    /* check that one move list is identical to another */
+    if (a->len != b->len) return 0;
+
+    for (int i = 0; i < a->len; ++i) {
+        if (memcmp(a->list + i, b->list + i, sizeof a->list[0])) return 0;
+    }
+
+    return 1;
+}
