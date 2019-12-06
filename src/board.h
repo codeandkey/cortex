@@ -21,7 +21,6 @@ int cortex_board_init(cortex_board* dst);
 void cortex_board_draw_types(cortex_board* dst);
 
 int cortex_board_add_attacked_squares(cortex_board* dst, cortex_square sq, cortex_square_list* out);
-int cortex_board_add_moving_squares(cortex_board* dst, cortex_square sq, cortex_square_list* out);
 
 /* Get squares attacked by a color. */
 int cortex_board_add_attacked_squares_color(cortex_board* dst, cortex_piece_color col, cortex_square_list* out);
