@@ -1,5 +1,5 @@
 CC      = gcc
-CFLAGS  = -std=c99 -Wall -Werror -g
+CFLAGS  = -std=gnu99 -Wall -Werror -g -DCORTEX_LOG_COLORS
 LDFLAGS =
 
 SOURCES = $(wildcard src/*.c)
