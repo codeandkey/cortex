@@ -4,6 +4,9 @@
  * Cortex engine bits.
  */
 
+#define CORTEX_ID_NAME   "cortex 0.1"
+#define CORTEX_ID_AUTHOR "codeandkey"
+
 #include <stdio.h>
 
 #include "options.h"

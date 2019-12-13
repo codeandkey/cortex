@@ -21,3 +21,12 @@ int cortex_util_is_piece(char p) {
         return 0;
     }
 }
+
+char cortex_util_colorflip(char c) {
+    return (c == 'b') ? 'w' : 'b';
+}
+
+char cortex_util_to_color(char p, char c) {
+    if (c == 'w') return toupper(p);
+    return tolower(p);
+}

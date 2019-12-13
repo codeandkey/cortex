@@ -1,5 +1,6 @@
 #include "engine.h"
 #include "log.h"
+#include "eval.h"
 
 #include <string.h>
 
@@ -18,6 +19,9 @@ void cortex_engine_free(cortex_engine* eng) {
 int cortex_engine_run(cortex_engine* eng) {
     if (!eng) return -1;
 
+    /* disable buffering */
+    setvbuf(eng->opts->out, NULL, _IONBF, 0);
+
     /* expect a 'uci' handshake */
     cortex_engine_read_line(eng);
 
@@ -28,11 +32,19 @@ int cortex_engine_run(cortex_engine* eng) {
         return -1;
     }
 
+    /* send back identification */
+    fprintf(eng->opts->out, "id name " CORTEX_ID_NAME "\n");
+    fprintf(eng->opts->out, "id author " CORTEX_ID_AUTHOR "\n");
+
     /* send back a 'uciok' */
     fprintf(eng->opts->out, "uciok\n");
 
+    cortex_log("Sent back uciok.");
+
     /* wait for commands until input broken */
     while (!cortex_engine_read_line(eng)) {
+        cortex_log("Received command: %s", eng->input_buf);
+
         char* inp_save;
         char* cmd = strtok_r(eng->input_buf, " \n", &inp_save);
 
@@ -40,9 +52,7 @@ int cortex_engine_run(cortex_engine* eng) {
 
         if (!strcmp(cmd, "isready")) {
             fprintf(eng->opts->out, "readyok\n");
-        }
-
-        if (!strcmp(cmd, "debug")) {
+        } else if (!strcmp(cmd, "debug")) {
             char* arg = strtok_r(NULL, " \n", &inp_save);
 
             if (!strcmp(arg, "on")) {
@@ -54,9 +64,7 @@ int cortex_engine_run(cortex_engine* eng) {
             } else {
                 cortex_error("Unrecognized argument '%s' to 'debug'!", arg);
             }
-        }
-
-        if (!strcmp(cmd, "position")) {
+        } else if (!strcmp(cmd, "position")) {
             char* line = strtok_r(NULL, "\n", &inp_save);
             char* moves = NULL;
 
@@ -82,6 +90,15 @@ int cortex_engine_run(cortex_engine* eng) {
                 cortex_position_write_fen(&eng->position, fen);
                 cortex_log("Position export: %s", fen);
             }
+        } else if (!strcmp(cmd, "go")) {
+            cortex_eval_go(&eng->position, eng->opts->out);
+        } else if (!strcmp(cmd, "quit")) {
+            cortex_log("Received quit request.");
+            return 0;
+        } else if (!strcmp(cmd, "stop")) {
+            cortex_log("Received stop request.");
+        } else {
+            cortex_error("error: unknown UCI command '%s'\n", cmd);
         }
     }
 

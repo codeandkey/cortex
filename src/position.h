@@ -15,6 +15,8 @@ typedef struct _cortex_position {
     int black_castle_kingside, black_castle_queenside;
     char color_to_move; /* 'w' or 'b' */
     cortex_square en_passant_target;
+    int halfmove_clock;
+    int fullmove_number;
 } cortex_position;
 
 /**
@@ -52,3 +54,43 @@ int cortex_position_write_fen(cortex_position* pos, char* out);
  * @return 0 if successful, error code otherwise
  */
 int cortex_position_apply_moves(cortex_position* pos, char* moves);
+
+/**
+ * Applies a single move in-place to the position.
+ *
+ * @param dst Position structure to modify.
+ * @param move Move to apply.
+ * @return 0 if successful, error code otherwise
+ */
+int cortex_position_apply_move(cortex_position* pos, char* move);
+
+
+/**
+ * Quickly determines if a square is in check.
+ *
+ * @param pos Position to examine
+ * @param sq Square to check
+ * @param color_in_check Color being threatened
+ * @return 1 if square is attacked, 0 otherwise
+ */
+int cortex_position_get_square_in_check(cortex_position* pos, cortex_square sq, char color_in_check);
+
+/**
+ * Quickly determine if a color is in check.
+ * This uses an early-exit function largely similar to the legal move generation function,
+ * except this exits early for better performance.
+ *
+ * @param pos Position to examine
+ * @param color_in_check Check if <color_in_check> is in check
+ * @return 1 if <color_in_check> is in check, 0 otherwise
+ */
+int cortex_position_get_color_in_check(cortex_position* pos, char color_in_check);
+
+/**
+ * Finds the king for a certain color.
+ *
+ * @param pos Position to examine
+ * @param color Color to search for
+ * @return cortex_square pointing to king, or CORTEX_SQUARE_NULL if not found
+ */
+cortex_square cortex_position_find_king(cortex_position* pos, char color);
