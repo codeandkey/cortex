@@ -35,7 +35,7 @@ cortex_transition_entry* _cortex_transition_list_generate_basic(cortex_position*
     for (int sq = 0; sq < 64; ++sq) {
         char piece = pos->board[sq];
         char piece_type = cortex_piece_get_type(piece);
-        char piece_color = (piece == piece_type) ? 'b' : 'w';
+        char piece_color = cortex_piece_get_color(piece);
 
         int cur_rank = cortex_square_rank_num(sq);
         int cur_file = cortex_square_file_num(sq);
@@ -580,7 +580,7 @@ cortex_transition_entry* _cortex_transition_list_prune_in_check(cortex_transitio
     if (cortex_position_get_color_in_check(head->transition.result, color_in_check)) {
         cortex_transition_entry* tmp = head->next;
         cortex_transition_entry_free(head);
-        return tmp;
+        return _cortex_transition_list_prune_in_check(tmp, color_in_check);
     } else {
         head->next = _cortex_transition_list_prune_in_check(head->next, color_in_check);
     }
@@ -635,6 +635,9 @@ static cortex_transition_entry* _cortex_transition_list_append_castles(cortex_tr
                     new_entry->transition.result->white_castle_kingside = 0;
                     new_entry->transition.result->white_castle_queenside = 0;
 
+                    new_entry->transition.result->color_to_move = cortex_util_colorflip(pos->color_to_move);
+                    new_entry->transition.result->en_passant_target = CORTEX_SQUARE_NULL;
+
                     /* Write movestr */
                     cortex_square_write(CORTEX_SQUARE_AT(1, 5), &new_entry->transition.movestr[0]);
                     cortex_square_write(CORTEX_SQUARE_AT(1, 7), &new_entry->transition.movestr[2]);
@@ -670,6 +673,9 @@ static cortex_transition_entry* _cortex_transition_list_append_castles(cortex_tr
 
                     new_entry->transition.result->white_castle_kingside = 0;
                     new_entry->transition.result->white_castle_queenside = 0;
+
+                    new_entry->transition.result->color_to_move = cortex_util_colorflip(pos->color_to_move);
+                    new_entry->transition.result->en_passant_target = CORTEX_SQUARE_NULL;
 
                     /* Write movestr */
                     cortex_square_write(CORTEX_SQUARE_AT(1, 5), &new_entry->transition.movestr[0]);
@@ -709,6 +715,9 @@ static cortex_transition_entry* _cortex_transition_list_append_castles(cortex_tr
                     new_entry->transition.result->black_castle_kingside = 0;
                     new_entry->transition.result->black_castle_queenside = 0;
 
+                    new_entry->transition.result->color_to_move = cortex_util_colorflip(pos->color_to_move);
+                    new_entry->transition.result->en_passant_target = CORTEX_SQUARE_NULL;
+
                     /* Write movestr */
                     cortex_square_write(CORTEX_SQUARE_AT(8, 5), &new_entry->transition.movestr[0]);
                     cortex_square_write(CORTEX_SQUARE_AT(8, 7), &new_entry->transition.movestr[2]);
@@ -744,6 +753,9 @@ static cortex_transition_entry* _cortex_transition_list_append_castles(cortex_tr
 
                     new_entry->transition.result->black_castle_kingside = 0;
                     new_entry->transition.result->black_castle_queenside = 0;
+
+                    new_entry->transition.result->color_to_move = cortex_util_colorflip(pos->color_to_move);
+                    new_entry->transition.result->en_passant_target = CORTEX_SQUARE_NULL;
 
                     /* Write movestr */
                     cortex_square_write(CORTEX_SQUARE_AT(8, 5), &new_entry->transition.movestr[0]);
