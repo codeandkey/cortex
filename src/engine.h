@@ -12,7 +12,7 @@
 #include "options.h"
 #include "position.h"
 
-#define CORTEX_ENGINE_UCI_BUFLEN 256
+#define CORTEX_ENGINE_UCI_BUFLEN 8192
 
 typedef struct _cortex_engine {
     cortex_options* opts;
