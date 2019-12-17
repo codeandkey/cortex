@@ -94,3 +94,14 @@ int cortex_position_get_color_in_check(cortex_position* pos, char color_in_check
  * @return cortex_square pointing to king, or CORTEX_SQUARE_NULL if not found
  */
 cortex_square cortex_position_find_king(cortex_position* pos, char color);
+
+/**
+ * Determines if the game is over.
+ * Returns 1 if the game is done, 0 if it can continue, or -1 on error.
+ * Places the result of the game into *dst if it is non-NULL.
+ *
+ * @param pos Position
+ * @param dst Game state dest
+ * @return 1, 0, -1 for game over, game in progress, and error respectively
+ */
+int cortex_position_is_game_over(cortex_position* pos, int* game_result);
