@@ -3,7 +3,7 @@
 #include "position.h"
 #include <stdio.h>
 
-#define CORTEX_EVAL_DEPTH 5
+#define CORTEX_EVAL_DEPTH 6
 
 typedef struct _cortex_eval {
     float eval;
@@ -16,10 +16,12 @@ typedef struct _cortex_eval {
  *
  * @param pos Position to evaluate.
  * @param uci_out File handle to output uci 'bestmove' command on.
+ * @param wtime Time remaining for white (ms). Ignored if -1.
+ * @param btime Time remaining for black (ms). Ignored if -1.
  *
  * @return 0 if succesfull, error code otherwise
  */
-int cortex_eval_go(cortex_position* pos, FILE* uci_out);
+int cortex_eval_go(cortex_position* pos, FILE* uci_out, int wtime, int btime);
 
 /**
  * Stop an evaluation and immediately return the best line.

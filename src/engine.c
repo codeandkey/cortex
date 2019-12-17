@@ -3,6 +3,7 @@
 #include "eval.h"
 
 #include <string.h>
+#include <stdlib.h>
 
 int cortex_engine_init(cortex_engine* eng, cortex_options* opts) {
     if (!eng) return -1;
@@ -91,7 +92,34 @@ int cortex_engine_run(cortex_engine* eng) {
                 cortex_log("Position export: %s", fen);
             }
         } else if (!strcmp(cmd, "go")) {
-            cortex_eval_go(&eng->position, eng->opts->out);
+            /* look for wtime, btime if present */
+            int wtime = -1, btime = -1;
+
+            char* c;
+            while ((c = strtok_r(NULL, " \n", &inp_save))) {
+                if (!strcmp(c, "wtime")) {
+                    char* wtimestr = strtok_r(NULL, " \n", &inp_save);
+
+                    if (wtimestr) {
+                        wtime = strtol(wtimestr, NULL, 10);
+                    } else {
+                        cortex_error("Expected wtime argument in go command!");
+                    }
+                }
+
+                if (!strcmp(c, "btime")) {
+                    char* btimestr = strtok_r(NULL, " \n", &inp_save);
+
+                    if (btimestr) {
+                        btime = strtol(btimestr, NULL, 10);
+                    } else {
+                        cortex_error("Expected btime argument in go command!");
+                    }
+                }
+            }
+
+            cortex_eval_go(&eng->position, eng->opts->out, wtime, btime);
+
         } else if (!strcmp(cmd, "quit")) {
             cortex_log("Received quit request.");
             return 0;

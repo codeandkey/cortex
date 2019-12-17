@@ -609,7 +609,7 @@ void cortex_transition_entry_free(cortex_transition_entry* entry) {
 cortex_transition_entry* cortex_transition_list_free(cortex_transition_entry* head) {
     if (!head) return NULL;
     cortex_transition_list_free(head->next);
-    free(head);
+    cortex_transition_entry_free(head);
     return NULL;
 }
 

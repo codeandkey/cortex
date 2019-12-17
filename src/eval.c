@@ -22,8 +22,11 @@ static pthread_t _cortex_eval_worker;
 static FILE* _cortex_uci_output;
 static cortex_position _cortex_eval_root_position;
 static int _cortex_eval_nodes;
+static int _cortex_eval_running;
 
 static int _cortex_eval_should_stop;
+static int _cortex_eval_wtime;
+static int _cortex_eval_btime;
 static pthread_mutex_t _cortex_eval_should_stop_mut = PTHREAD_MUTEX_INITIALIZER;
 
 static void* _cortex_eval_main(void* a);
@@ -37,13 +40,26 @@ static int _cortex_eval_set_should_stop(int should_stop);
 
 static cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval a, cortex_eval b, char* bestmove);
 
-int cortex_eval_go(cortex_position* pos, FILE* uci_out) {
+int cortex_eval_go(cortex_position* pos, FILE* uci_out, int wtime, int btime) {
     if (!pos || !uci_out) return 0;
+
+    /* FIXME: always play e2e4 as white. this stops the game from aborting while the eval is thinking */
+    char fen[CORTEX_POSITION_FEN_BUFLEN] = {0};
+    cortex_position_write_fen(pos, fen);
+
+    if (!strcmp(fen, CORTEX_POSITION_FEN_STANDARD)) {
+        fprintf(uci_out, "bestmove e2e4\n");
+        return 0;
+    }
 
     _cortex_uci_output = uci_out;
     memcpy(&_cortex_eval_root_position, pos, sizeof *pos);
 
     cortex_heval(pos, 1);
+
+    _cortex_eval_running = 1;
+    _cortex_eval_wtime = wtime;
+    _cortex_eval_btime = btime;
 
     /* Dispatch worker */
     if (pthread_create(&_cortex_eval_worker, NULL, &_cortex_eval_main, NULL)) {
@@ -55,6 +71,17 @@ int cortex_eval_go(cortex_position* pos, FILE* uci_out) {
 }
 
 void cortex_eval_stop() {
+    if (_cortex_eval_running) {
+        void* res = NULL;
+
+        if (pthread_join(_cortex_eval_worker, &res)) {
+            cortex_error("pthread_join failed!");
+        } else {
+            cortex_log("Joined evaluation worker with exit code %p", res);
+        }
+
+        _cortex_eval_running = 0;
+    }
 }
 
 void* _cortex_eval_main(void* a) {
@@ -64,15 +91,41 @@ void* _cortex_eval_main(void* a) {
         pthread_exit(NULL);
     }
 
-    _cortex_eval_get_should_stop();
-
     _cortex_eval_nodes = 0;
+
+    _cortex_eval_get_should_stop(); /* get rid of warnings until UCI STOP is implemented */
+
+    /* Modify the search depth depending on how much time is remaining. */
+    int turn_time;
+
+    if (_cortex_eval_root_position.color_to_move == 'w') {
+        turn_time = _cortex_eval_wtime;
+    } else {
+        turn_time = _cortex_eval_btime;
+    }
+
+    int current_depth = CORTEX_EVAL_DEPTH;
+
+    /* TODO: these numbers are currently pretty arbitrary. maybe some better numerical analysis could be applied here */
+    if (turn_time != -1) {
+        if (turn_time < 1000) {
+            current_depth = 1;
+        } else if (turn_time < 5000) {
+            current_depth = 2;
+        } else if (turn_time < 10000) {
+            current_depth = 3;
+        } else if (turn_time < 60000) { 
+            current_depth = 4;
+        } else {
+            current_depth = 5;
+        }
+    }
 
     /* Start synchronous alpha beta search */
     char bestmove[6] = {0};
-    cortex_eval eval = _cortex_eval_alpha_beta(&_cortex_eval_root_position, CORTEX_EVAL_DEPTH, CORTEX_EVAL_NEG_INF, CORTEX_EVAL_INF, bestmove);
+    cortex_eval eval = _cortex_eval_alpha_beta(&_cortex_eval_root_position, current_depth, CORTEX_EVAL_NEG_INF, CORTEX_EVAL_INF, bestmove);
 
-    cortex_log("Finished alpha-beta search with depth %d, %d leaf nodes evaluated", CORTEX_EVAL_DEPTH, _cortex_eval_nodes);
+    cortex_log("Finished alpha-beta search with depth %d, %d leaf nodes evaluated", current_depth, _cortex_eval_nodes);
 
     if (eval.has_mate) {
         cortex_log("Final evaluation: #%d", eval.mate);
@@ -220,8 +273,8 @@ cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval
                     /* The move is a win! It's impossible for a white move to deliver mate for black */
                     ab_result.has_mate = 1;
                     ab_result.mate = 1;
-                    cortex_transition_list_free(moves);
                     if (bestmove) memcpy(bestmove, cur_move->transition.movestr, sizeof cur_move->transition.movestr);
+                    cortex_transition_list_free(moves);
                     return ab_result;
                 } else {
                     /* The move delivers a stalemate. Consider it at evaluation 0 */
@@ -238,7 +291,7 @@ cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval
 
             int res = _cortex_eval_cmp(ab_result, cur);
 
-            if (res > 0) {
+            if (res >= 0) {
                 /* New best move. */
                 if (bestmove) memcpy(bestmove, cur_move->transition.movestr, sizeof cur_move->transition.movestr);
                 cur = ab_result;
@@ -249,7 +302,6 @@ cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval
             a = _cortex_eval_max(a, cur);
 
             if (_cortex_eval_cmp(a, b) >= 0) {
-                cortex_transition_list_free(moves);
                 cortex_debug("white: Stopping evaluation due alpha-beta pruning");
                 break;
             }
@@ -262,6 +314,8 @@ cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval
             if (cur.mate < 0) --cur.mate;
             if (cur.mate > 0) ++cur.mate;
         }
+
+        cortex_transition_list_free(moves);
 
         return cur;
     } else {
@@ -303,7 +357,7 @@ cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval
 
             int res = _cortex_eval_cmp(ab_result, cur);
 
-            if (res < 0) {
+            if (res <= 0) {
                 /* New best move. */
                 if (bestmove) memcpy(bestmove, cur_move->transition.movestr, sizeof cur_move->transition.movestr);
                 cur = ab_result;
@@ -314,7 +368,6 @@ cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval
             b = _cortex_eval_min(b, cur);
 
             if (_cortex_eval_cmp(a, b) >= 0) {
-                cortex_transition_list_free(moves);
                 cortex_debug("black: Stopping evaluation due alpha-beta pruning");
                 break;
             }
@@ -327,6 +380,8 @@ cortex_eval _cortex_eval_alpha_beta(cortex_position* pos, int depth, cortex_eval
             if (cur.mate < 0) --cur.mate;
             if (cur.mate > 0) ++cur.mate;
         }
+
+        cortex_transition_list_free(moves);
 
         return cur;
     }
