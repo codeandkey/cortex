@@ -191,11 +191,11 @@ int cortex_position_apply_moves(cortex_position* pos, char* moves) {
     if (!pos) return -1;
     if (!moves) return -2;
 
-    cortex_log("Applying moves %s to position %p", moves, pos);
+    cortex_debug("Applying moves %s to position %p", moves, pos);
 
     char* moves_save;
     for (char* cmove = strtok_r(moves, " \n", &moves_save); cmove; cmove = strtok_r(NULL, " \n", &moves_save)) {
-        cortex_log("Applying move %s ...", cmove);
+        cortex_debug("Applying move %s ...", cmove);
 
         if (cortex_position_apply_move(pos, cmove)) {
             return -1;
@@ -525,4 +525,29 @@ cortex_square cortex_position_find_king(cortex_position* pos, char color) {
     }
 
     return CORTEX_SQUARE_NULL;
+}
+
+int cortex_position_is_game_over(cortex_position* pos, int* game_result) {
+    if (!pos) return -1;
+
+    /* Are there legal next moves? */
+    cortex_transition_entry* next_moves = cortex_transition_list_generate_legal(pos);
+
+    if (next_moves) { /* Game still in progress! */
+        cortex_transition_list_free(next_moves);
+        return 0;
+    }
+
+    if (!game_result) return 1;
+
+    /* No more moves. Current check state will determine game result. */
+    if (cortex_position_get_color_in_check(pos, 'w')) {
+        *game_result = -1;
+    } else if (cortex_position_get_color_in_check(pos, 'b')) {
+        *game_result = 1;
+    } else {
+        *game_result = 0;
+    }
+
+    return 1;
 }
