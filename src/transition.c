@@ -83,17 +83,22 @@ cortex_transition_entry* _cortex_transition_list_generate_basic(cortex_position*
 
                 /* Is the target an enemy piece? Normal capture, or promotion */
                 if (target_piece || (target_sq == pos->en_passant_target && cur_rank + pawn_direction == pawn_ep_target_rank)) {
-                    if (cortex_piece_get_color(target_piece) != pos->color_to_move) {
-                        /* Potential capture, check if promotion */
-                        if (cur_rank + pawn_direction == pawn_last_rank) {
-                            /* Promoting capture */
-                            output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'q');
-                            output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'b');
-                            output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'n');
-                            output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'r');
-                        } else {
-                            /* Non-promotion */
-                            output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 0);
+                    if (!target_piece) {
+                        /* En passant capture */
+                        output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 0);
+                    } else {
+                        if (cortex_piece_get_color(target_piece) != pos->color_to_move) {
+                            /* Potential capture, check if promotion */
+                            if (cur_rank + pawn_direction == pawn_last_rank) {
+                                /* Promoting capture */
+                                output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'q');
+                                output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'b');
+                                output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'n');
+                                output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 'r');
+                            } else {
+                                /* Non-promotion */
+                                output_head = _cortex_transition_list_append_simple_move(output_head, pos, sq, target_sq, 0);
+                            }
                         }
                     }
                 }
@@ -563,7 +568,13 @@ static cortex_transition_entry* _cortex_transition_list_append_simple_move(corte
 
     /* If capture was on en passant target, remove the captured pawn. */
     if (from_type == 'p' && to == pos->en_passant_target) {
-        new_entry->transition.result->board[pos->en_passant_target] = 0;
+        int to_rank = cortex_square_rank_num(to);
+        int to_file = cortex_square_file_num(to);
+
+        if (to_rank == 3) to_rank = 4;
+        if (to_rank == 6) to_rank = 5;
+
+        new_entry->transition.result->board[CORTEX_SQUARE_AT(to_rank, to_file)] = 0;
     }
 
     /* Update linked list target */
