@@ -3,6 +3,7 @@
 #include <time.h>
 
 FILE* cortex_log_target = NULL;
+int cortex_debug_enabled = 0;
 
 int cortex_log_init(FILE* out) {
     if (!out) return -1;
