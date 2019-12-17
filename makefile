@@ -1,6 +1,6 @@
 CC      = gcc
 CFLAGS  = -std=gnu99 -Wall -Werror -g -DCORTEX_LOG_COLORS
-LDFLAGS =
+LDFLAGS = -pthread
 
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(SOURCES:.c=.o)

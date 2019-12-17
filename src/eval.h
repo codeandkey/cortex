@@ -3,6 +3,8 @@
 #include "position.h"
 #include <stdio.h>
 
+#define CORTEX_EVAL_DEPTH 5
+
 typedef struct _cortex_eval {
     float eval;
     int mate, has_mate;
