@@ -12,23 +12,7 @@ static float _cortex_clamp(float x);
  * Recursively
  */
 cortex_eval cortex_eval_position(cortex_board* b) {
-    /* TODO: use the cache better. this function is only called for full-depth evaluations
-     * the chances that it will be called twice on the same position is rather unlikely
-     *
-     * however, cached evals for positions should always reflect a constant depth...
-     * otherwise a depth-1 eval might get cached and then treated as a full-depth eval, causing problems...
-     */
-    cortex_eval cached_eval;
-
-    if (cortex_eval_try_cache(b, &cached_eval)) {
-        return cached_eval;
-    }
-
-    cached_eval = _cortex_eval_position_sub(b, CORTEX_EVAL_DEPTH);
-
-    cortex_eval_cache_insert(b, cached_eval);
-
-    return cached_eval;
+    return _cortex_eval_position_sub(b, CORTEX_EVAL_DEPTH);
 }
 
 cortex_eval _cortex_eval_position_sub(cortex_board* b, int depth) {
@@ -51,6 +35,20 @@ cortex_eval _cortex_eval_position_sub(cortex_board* b, int depth) {
         out.evaluation = cortex_eval_immediate(b);
         return out;
     }
+
+    /* Check if there is a cached evaluation at an acceptable depth. */
+    int cached_depth;
+    cortex_eval cached_eval;
+
+    if (cortex_eval_try_cache(b, &cached_eval, &cached_depth)) {
+        /* Got a cache hit. Accept it if it evaluated to the depth we need. */
+
+        if (cached_depth >= depth) {
+            return cached_eval;
+        }
+    }
+
+    /* Cache either missed or was not deep enough. Evaluate from scratch and re-cache the position. */
 
     /* Iterate through the next legal moves. */
     /* Evaluate each board and find the min-maxed best move. */
@@ -108,6 +106,9 @@ cortex_eval _cortex_eval_position_sub(cortex_board* b, int depth) {
         if (out.mate_in < 0) out.mate_in--;
         if (out.mate_in > 0) out.mate_in++;
     }
+
+    /* Cache the new eval if we've made it this far. */
+    cortex_eval_cache_insert(b, out, depth);
 
     return out;
 }

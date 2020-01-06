@@ -22,31 +22,29 @@ cortex_piece CORTEX_BOARD_INITIAL_STATE[] = {
 int cortex_board_init(cortex_board* dst) {
     if (!dst) return -1;
 
-    cortex_log_debug("Initializing blank board state\n");
+    cortex_log_debug("Initializing blank board state");
     memcpy(dst->state, CORTEX_BOARD_INITIAL_STATE, sizeof dst->state);
     dst->color_to_move = CORTEX_PIECE_COLOR_WHITE;
 
-    cortex_log_debug("Initializing move history\n");
+    cortex_log_debug("Initializing move history");
     cortex_move_list_init(&dst->move_history);
 
-    cortex_log_debug("Generating legal moves\n");
+    cortex_log_debug("Generating legal moves");
     cortex_board_gen_legal_moves(dst);
 
-    cortex_log_debug("Initialized standard board at %p\n", dst);
+    cortex_log_debug("Initialized standard board at %p", dst);
 
     return 0;
 }
 
 void cortex_board_draw_types(cortex_board* dst) {
-    printf("Board state (%p):\n", dst);
     for (int rank = 8; rank >= 1; --rank) {
         for (int file = 1; file <= 8; ++file) {
-            printf("%c", cortex_piece_type_char(dst->state[CORTEX_SQUARE_AT(rank, file)]));
+            fprintf(stderr, "%c", cortex_piece_type_char(dst->state[CORTEX_SQUARE_AT(rank, file)]));
         }
 
-        printf("\n");
+        fprintf(stderr, "\n");
     }
-    printf("End board state (%p)\n", dst);
 }
 
 int cortex_board_add_attacked_squares(cortex_board* dst, cortex_square sq, cortex_square_list* out) {
@@ -177,12 +175,6 @@ int cortex_board_add_attacked_squares(cortex_board* dst, cortex_square sq, corte
         return 0;
     }
 
-    return -1;
-}
-
-int cortex_board_add_moving_squares(cortex_board* dst, cortex_square sq, cortex_square_list* out) {
-    printf("%s NOT IMPLEMENTED\n", __func__);
-    exit(-1);
     return -1;
 }
 
@@ -839,9 +831,6 @@ int cortex_board_apply_move(cortex_board* dst, cortex_move move) {
     cortex_board_complete_move(dst, &move, dst);
 
     cortex_board_gen_legal_moves(dst);
-
-    //printf("Legal next moves (%s to play):\n", (dst->color_to_move == CORTEX_PIECE_COLOR_WHITE) ? "white" : "black");
-    //cortex_move_list_print(&dst->legal_moves);
 
     return 0;
 }
